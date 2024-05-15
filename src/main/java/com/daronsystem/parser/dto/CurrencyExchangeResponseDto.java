@@ -7,13 +7,12 @@ import lombok.*;
 @AllArgsConstructor
 @Getter
 @Setter
-public class CurrencyExchangeDto {
+public class CurrencyExchangeResponseDto {
 
     private String currencyFrom;
+    private String amountFrom;
     private String currencyTo;
-    private CurrencyRateDto currencyRate;
-    private Double exchangeAmount;
-    private Double amountTotal;
-    private String message;
+    private String exchangeRate;
+    private String amountTotal;
 
 }

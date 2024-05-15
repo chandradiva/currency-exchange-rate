@@ -2,7 +2,9 @@ package com.daronsystem.parser.service;
 
 import com.daronsystem.parser.dto.CurrencyExchangeDto;
 import com.daronsystem.parser.dto.CurrencyExchangeRequestDto;
+import com.daronsystem.parser.dto.CurrencyExchangeResponseDto;
 import com.daronsystem.parser.dto.CurrencyRateDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,12 +25,18 @@ public class ExchangeCurrencyService {
 
     public void parsingJson(List<CurrencyExchangeRequestDto> requests) {
         try {
+            ObjectMapper mapper = new ObjectMapper();
+
             Map<String, CurrencyRateDto> mapCurrencyRates = currencyRateService.getMapCurrencyRates();
             List<CurrencyExchangeDto> currencyExchanges = requests.stream()
-                    .map(request -> this.transformObject(mapCurrencyRates, request))
+                    .map(request -> this.processExchange(mapCurrencyRates, request))
                     .toList();
 
-            File outputFile = new File("output.txt");
+            List<CurrencyExchangeResponseDto> responses = currencyExchanges.stream()
+                    .map(this::transformResponse)
+                    .toList();
+
+            File outputFile = new File("output.json");
             FileWriter fr = null;
             BufferedWriter br = null;
 
@@ -36,10 +44,7 @@ public class ExchangeCurrencyService {
                 fr = new FileWriter(outputFile);
                 br = new BufferedWriter(fr);
 
-                for (CurrencyExchangeDto currencyExchange : currencyExchanges) {
-                    System.out.println(currencyExchange.getMessage());
-                    br.write(currencyExchange.getMessage() + System.lineSeparator());
-                }
+                br.write(mapper.writeValueAsString(responses));
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
@@ -55,7 +60,7 @@ public class ExchangeCurrencyService {
         }
     }
 
-    public CurrencyExchangeDto transformObject(Map<String, CurrencyRateDto> mapCurrencyRates, CurrencyExchangeRequestDto request) {
+    public CurrencyExchangeDto processExchange(Map<String, CurrencyRateDto> mapCurrencyRates, CurrencyExchangeRequestDto request) {
         try {
             String key = request.getCurrencyFrom() + "-" + request.getCurrencyTo();
             CurrencyRateDto currencyRate = mapCurrencyRates.get(key);
@@ -74,6 +79,8 @@ public class ExchangeCurrencyService {
                     + amountTotal;
 
             return CurrencyExchangeDto.builder()
+                    .currencyFrom(request.getCurrencyFrom())
+                    .currencyTo(request.getCurrencyTo())
                     .currencyRate(mapCurrencyRates.get(key))
                     .exchangeAmount(exchangeAmount)
                     .amountTotal(amountTotal)
@@ -83,12 +90,24 @@ public class ExchangeCurrencyService {
             String message = request.getCurrencyFrom() + " to " + request.getCurrencyTo() + " -> Currency Rate not found";
 
             return CurrencyExchangeDto.builder()
+                    .currencyFrom(request.getCurrencyFrom())
+                    .currencyTo(request.getCurrencyTo())
                     .currencyRate(null)
                     .exchangeAmount(Double.parseDouble("0"))
                     .amountTotal(Double.parseDouble("0"))
                     .message(message)
                     .build();
         }
+    }
+
+    public CurrencyExchangeResponseDto transformResponse(CurrencyExchangeDto currencyExchange) {
+        return CurrencyExchangeResponseDto.builder()
+                .currencyFrom(currencyExchange.getCurrencyFrom())
+                .amountFrom(String.valueOf(currencyExchange.getExchangeAmount()))
+                .currencyTo(currencyExchange.getCurrencyTo())
+                .exchangeRate(currencyExchange.getCurrencyRate() != null ? String.valueOf(currencyExchange.getCurrencyRate().getExchangeRate()) : null)
+                .amountTotal(String.valueOf(currencyExchange.getAmountTotal()))
+                .build();
     }
 
 }
