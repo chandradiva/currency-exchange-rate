@@ -1,0 +1,2 @@
+USD to EUR, Rate: 0.94, Amount From: 1.5, Total Amount: 1.41
+IDR to EUR -> Currency Rate not found
